@@ -2,16 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Home, Calendar, Activity, Users, Settings, Zap, X, ChevronLeft } from "lucide-react"
+import { Home, Calendar, Activity, Users, Settings, Zap, X, ChevronLeft, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAppContext } from "@/lib/context/app-context"
 import { cn } from "@/lib/utils"
 
 const sidebarItems = [
-  { id: "dashboard", label: "Dashboard", icon: Home, href: "/" },
-  { id: "workers", label: "Workers", icon: Users, href: "/workers" },
-  { id: "shifts", label: "Shifts", icon: Calendar, href: "/shifts" },
+  { id: "shifts", label: "Events", icon: Calendar, href: "/events" },
+  { id: "workers", label: "Hire a Pro", icon: Users, href: "/workers" },
+  { id: "messages", label: "Messages", icon: MessageCircle, href: "/messages" },
   { id: "staff", label: "Live Staff", icon: Activity, href: "/staff" },
   { id: "settings", label: "Settings", icon: Settings, href: "/settings" },
 ]
@@ -42,6 +42,9 @@ export function AppSidebar({
         return state.shifts?.filter((s) => s.status === "published").length || 0
       case "staff":
         return state.staff?.filter((s) => s.status === "active").length || 0
+      case "messages":
+        // Show unread messages count
+        return state.messages?.filter((m) => !m.isRead).length || 0
       default:
         return 0
     }
@@ -78,7 +81,6 @@ export function AppSidebar({
                     alt="Asygn" 
                     className="h-6 w-auto flex-shrink-0"
                   />
-                 
                 </div>
               ) : (
                 <img 
@@ -150,7 +152,9 @@ export function AppSidebar({
                               "text-xs px-1.5 py-0.5 font-medium ml-auto",
                               isActive 
                                 ? "bg-orange-100 text-orange-700 border-orange-200"
-                                : "bg-gray-100 text-gray-600 border-gray-200"
+                                : item.id === "messages"
+                                  ? "bg-blue-100 text-blue-700 border-blue-200"
+                                  : "bg-gray-100 text-gray-600 border-gray-200"
                             )}
                           >
                             {badgeCount}
@@ -164,7 +168,10 @@ export function AppSidebar({
                       <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
                         {item.label}
                         {badgeCount > 0 && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-gray-700 rounded text-xs">
+                          <span className={cn(
+                            "ml-2 px-1.5 py-0.5 rounded text-xs",
+                            item.id === "messages" ? "bg-blue-600" : "bg-gray-700"
+                          )}>
                             {badgeCount}
                           </span>
                         )}

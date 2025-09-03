@@ -1,15 +1,16 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, DollarSign, User, Eye, Edit, Star } from "lucide-react"
+import { Calendar, Clock, DollarSign, User, Eye, Edit, Star, Users } from "lucide-react"
 import { Shift, mockStaff } from "@/components/shifts/data/mockData"
 
 interface ShiftsListViewProps {
   filteredShifts: Shift[]
   onViewDetails: (shift: Shift) => void
+  onHireStaff?: (shift: Shift) => void
 }
 
-export function ShiftsListView({ filteredShifts, onViewDetails }: ShiftsListViewProps) {
+export function ShiftsListView({ filteredShifts, onViewDetails, onHireStaff }: ShiftsListViewProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "urgent":
@@ -36,6 +37,30 @@ export function ShiftsListView({ filteredShifts, onViewDetails }: ShiftsListView
     return staffIds.map(id => mockStaff.find(staff => staff.id === id)).filter((staff): staff is NonNullable<typeof staff> => staff !== undefined)
   }
 
+  const convertShiftForHiring = (shift: Shift) => {
+    return {
+      title: shift.title,
+      location: shift.location,
+      date: shift.date,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      hourlyRate: shift.hourlyRate.toString(),
+      staffNeeded: shift.staffNeeded.toString(),
+      staffType: shift.requirements.find(req => 
+        ['Server', 'Bartender', 'Host/Hostess', 'Cook', 'Kitchen Assistant', 'Dishwasher', 'Barista', 'Cashier'].includes(req)
+      ) || 'Server',
+      description: shift.description || '',
+      specialRequirements: shift.requirements.filter(req => 
+        !['Server', 'Bartender', 'Host/Hostess', 'Cook', 'Kitchen Assistant', 'Dishwasher', 'Barista', 'Cashier'].includes(req)
+      ),
+      dressAttire: shift.requirements.find(req => 
+        ['Business Casual', 'Uniform Provided', 'All Black', 'Chef Whites'].includes(req)
+      ) || 'Business Casual',
+      workerType: 'regular' as const,
+      useCurrentLocation: false
+    }
+  }
+
   if (filteredShifts.length === 0) {
     return (
       <Card>
@@ -54,6 +79,8 @@ export function ShiftsListView({ filteredShifts, onViewDetails }: ShiftsListView
     <div className="grid gap-6">
       {filteredShifts.map((shift) => {
         const assignedStaff = getAssignedStaff(shift.staffAssigned)
+        const isFullyStaffed = shift.staffAssigned.length >= shift.staffNeeded
+        const needsStaff = shift.staffAssigned.length < shift.staffNeeded
         
         return (
           <Card key={shift.id} className="hover:shadow-lg transition-shadow duration-200 border border-gray-200">
@@ -172,21 +199,36 @@ export function ShiftsListView({ filteredShifts, onViewDetails }: ShiftsListView
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </Button>
-                  {shift.status === "urgent" && (
-                    <Button 
-                      size="sm" 
-                      className="bg-red-500 hover:bg-red-600 text-white"
-                    >
-                      Hire Now
-                    </Button>
+                  
+                  {/* Conditional Hire/Find Staff Button */}
+                  {needsStaff && shift.status !== 'filled' && (
+                    <>
+                      {shift.status === "urgent" ? (
+                        <Button 
+                          size="sm" 
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          onClick={() => onHireStaff?.(shift)}
+                        >
+                          <Users className="w-4 h-4 mr-2" />
+                          Urgent Hire
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          className="bg-orange-500 hover:bg-orange-600 text-white"
+                          onClick={() => onHireStaff?.(shift)}
+                        >
+                          <Users className="w-4 h-4 mr-2" />
+                          Find Staff
+                        </Button>
+                      )}
+                    </>
                   )}
-                  {shift.status === "open" && (
-                    <Button 
-                      size="sm" 
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                    >
-                      Find Staff
-                    </Button>
+                  
+                  {isFullyStaffed && (
+                    <Badge className="bg-green-50 text-green-700 border border-green-200 justify-center py-2">
+                      Fully Staffed
+                    </Badge>
                   )}
                 </div>
               </div>

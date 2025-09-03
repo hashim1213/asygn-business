@@ -11,6 +11,7 @@ import { ShiftsListView } from "@/components/shifts/ShiftsListView"
 import { ShiftsCalendarView } from "@/components/shifts/ShiftsCalendarView"
 import { ShiftDetailsSheet } from "@/components/shifts/ShiftDetailsModal"
 import { mockShifts } from "@/components/shifts/data/mockData"
+import { Shift } from "@/components/shifts/data/mockData"
 
 export function ShiftsContent() {
   const [activeTab, setActiveTab] = useState("all")
@@ -19,6 +20,7 @@ export function ShiftsContent() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedShift, setSelectedShift] = useState<any>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [hireShift, setHireShift] = useState<Shift | null>(null)
 
   const filteredShifts = mockShifts.filter((shift) => {
     const matchesSearch = shift.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -27,6 +29,41 @@ export function ShiftsContent() {
     const matchesTab = activeTab === "all" || shift.status === activeTab
     return matchesSearch && matchesTab
   })
+
+  const handleHireStaff = (shift: Shift) => {
+    // Convert shift to the format expected by the modal
+    const shiftForHiring = {
+      title: shift.title,
+      location: shift.location,
+      date: shift.date,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      hourlyRate: shift.hourlyRate.toString(),
+      staffNeeded: shift.staffNeeded.toString(),
+      staffType: shift.requirements.find(req => 
+        ['Server', 'Bartender', 'Host/Hostess', 'Cook', 'Kitchen Assistant', 'Dishwasher', 'Barista', 'Cashier'].includes(req)
+      ) || 'Server',
+      description: shift.description || '',
+      specialRequirements: shift.requirements.filter(req => 
+        !['Server', 'Bartender', 'Host/Hostess', 'Cook', 'Kitchen Assistant', 'Dishwasher', 'Barista', 'Cashier'].includes(req)
+      ),
+      dressAttire: shift.requirements.find(req => 
+        ['Business Casual', 'Uniform Provided', 'All Black', 'Chef Whites'].includes(req)
+      ) || 'Business Casual',
+      workerType: 'regular' as const,
+      useCurrentLocation: false
+    }
+    
+    setHireShift(shift)
+    setShowCreateModal(true)
+  }
+
+  const handleCloseCreateModal = (open: boolean) => {
+    if (!open) {
+      setHireShift(null)
+    }
+    setShowCreateModal(open)
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
@@ -119,20 +156,43 @@ export function ShiftsContent() {
         <ShiftsListView
           filteredShifts={filteredShifts}
           onViewDetails={setSelectedShift}
+          onHireStaff={handleHireStaff}
         />
       )}
 
       {/* Modals */}
       <CreateShiftModal
         open={showCreateModal}
-        onOpenChange={setShowCreateModal}
+        onOpenChange={handleCloseCreateModal}
+        initialShift={hireShift ? {
+          title: hireShift.title,
+          location: hireShift.location,
+          date: hireShift.date,
+          startTime: hireShift.startTime,
+          endTime: hireShift.endTime,
+          hourlyRate: hireShift.hourlyRate.toString(),
+          staffNeeded: hireShift.staffNeeded.toString(),
+          staffType: hireShift.requirements.find(req => 
+            ['Server', 'Bartender', 'Host/Hostess', 'Cook', 'Kitchen Assistant', 'Dishwasher', 'Barista', 'Cashier'].includes(req)
+          ) || 'Server',
+          description: hireShift.description || '',
+          specialRequirements: hireShift.requirements.filter(req => 
+            !['Server', 'Bartender', 'Host/Hostess', 'Cook', 'Kitchen Assistant', 'Dishwasher', 'Barista', 'Cashier'].includes(req)
+          ),
+          dressAttire: hireShift.requirements.find(req => 
+            ['Business Casual', 'Uniform Provided', 'All Black', 'Chef Whites'].includes(req)
+          ) || 'Business Casual',
+          workerType: 'regular' as const,
+          useCurrentLocation: false
+        } : undefined}
+        startFromStaff={!!hireShift}
       />
 
-<ShiftDetailsSheet
-  shift={selectedShift}
-  isOpen={!!selectedShift}
-  onClose={() => setSelectedShift(null)}
-/>
+      <ShiftDetailsSheet
+        shift={selectedShift}
+        isOpen={!!selectedShift}
+        onClose={() => setSelectedShift(null)}
+      />
     </div>
   )
 }
