@@ -1,0 +1,396 @@
+// Updated Prisma schema with NextAuth support and messaging/rating
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js Models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  password    String?  // Added for NextAuth credentials
+  phone       String?
+  role        UserRole @default(CLIENT)
+  
+  // NextAuth fields
+  emailVerified DateTime?
+  image         String?
+  
+  stripeCustomerId String?
+  stripeAccountId  String? // For staff payouts
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+  
+  // Relations
+  eventsCreated Event[] @relation("EventOrganizer")
+  staffProfile  StaffProfile?
+  bookings      Booking[]
+  applications  Application[]
+  
+  // New message relationships
+  messagesSent     Message[] @relation("MessageSender")
+  messagesReceived Message[] @relation("MessageReceiver")
+  
+  // New rating relationships
+  ratingsGiven     Rating[] @relation("RatingGiver")
+  ratingsReceived  Rating[] @relation("RatingReceiver")
+  
+  @@map("users")
+}
+
+model StaffProfile {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  staffType   StaffType
+  hourlyRate  Float
+  experience  String?
+  bio         String?
+  skills      String[]
+  equipment   String[]
+  
+  // Location
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  maxRadius   Int        @default(25) // miles willing to travel
+  
+  // Availability
+  available   Boolean    @default(true)
+  availability String?   // e.g., "Available most evenings and weekends"
+  
+  // Verification
+  verified    Boolean    @default(false)
+  verifiedAt  DateTime?
+  
+  // Stats
+  rating          Float   @default(0)
+  reviewCount     Int     @default(0)
+  completedJobs   Int     @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  applications Application[]
+  assignments  StaffAssignment[]
+  
+  @@map("staff_profiles")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String?
+  description String?
+  
+  // Location
+  venue       String
+  address     String
+  latitude    Float?
+  longitude   Float?
+  
+  // Timing
+  date        DateTime
+  startTime   String
+  endTime     String
+  
+  // Details
+  eventType   EventType?
+  guestCount  Int?
+  
+  organizerId String
+  organizer   User   @relation("EventOrganizer", fields: [organizerId], references: [id])
+  
+  status      EventStatus @default(DRAFT)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  bookings Booking[]
+  
+  @@map("events")
+}
+
+model Booking {
+  id        String    @id @default(cuid())
+  
+  eventId   String
+  event     Event     @relation(fields: [eventId], references: [id])
+  
+  clientId  String
+  client    User      @relation(fields: [clientId], references: [id])
+  
+  // Pricing
+  subtotal      Float
+  platformFee   Float
+  total         Float
+  
+  status        BookingStatus @default(PENDING)
+  
+  // Payment
+  stripePaymentIntentId String?
+  paymentStatus         PaymentStatus @default(PENDING)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  staffBookings    StaffBooking[]
+  applications     Application[]
+  staffAssignments StaffAssignment[]
+  messages         Message[]
+  ratings          Rating[]
+  
+  @@map("bookings")
+}
+
+model StaffBooking {
+  id        String @id @default(cuid())
+  
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  
+  staffType StaffType
+  quantity  Int
+  hourlyRate Float
+  
+  createdAt DateTime @default(now())
+  
+  @@map("staff_bookings")
+}
+
+model Application {
+  id        String @id @default(cuid())
+  
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  
+  staffId   String
+  staff     User @relation(fields: [staffId], references: [id])
+  
+  staffProfileId String
+  staffProfile   StaffProfile @relation(fields: [staffProfileId], references: [id])
+  
+  staffType StaffType
+  hourlyRate Float
+  
+  status    ApplicationStatus @default(PENDING)
+  
+  // Communication
+  message   String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("applications")
+}
+
+// Staff Assignment model to track specific staff assigned to bookings
+model StaffAssignment {
+  id           String   @id @default(cuid())
+  
+  // Relationships
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId    String
+  
+  staff        StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId      String
+  
+  // Assignment details
+  status       AssignmentStatus @default(PENDING)
+  hourlyRate   Float
+  hoursWorked  Float?
+  totalPay     Float?
+  
+  // Timestamps
+  assignedAt   DateTime @default(now())
+  acceptedAt   DateTime?
+  declinedAt   DateTime?
+  completedAt  DateTime?
+  
+  // Metadata
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([bookingId, staffId])
+  @@map("staff_assignments")
+}
+
+// Message model for booking communications
+model Message {
+  id          String      @id @default(cuid())
+  content     String
+  messageType MessageType @default(TEXT)
+  
+  // Relationships
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId   String
+  
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id])
+  senderId    String
+  
+  receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverId  String
+  
+  // Metadata
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("messages")
+}
+
+// Rating model for reviews
+model Rating {
+  id         String     @id @default(cuid())
+  
+  // Relationships
+  booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId  String
+  
+  rater      User       @relation("RatingGiver", fields: [raterId], references: [id])
+  raterId    String
+  
+  ratee      User       @relation("RatingReceiver", fields: [rateeId], references: [id])
+  rateeId    String
+  
+  // Rating details
+  rating     Int        // 1-5 stars
+  review     String?    // Optional written review
+  ratingType RatingType
+  
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  
+  @@unique([bookingId, raterId, rateeId]) // Prevent duplicate ratings
+  @@map("ratings")
+}
+
+// Enums
+enum UserRole {
+  CLIENT
+  STAFF
+  ADMIN
+}
+
+enum StaffType {
+  BARTENDER
+  SERVER
+  BARBACK
+  EVENT_CREW
+}
+
+enum EventType {
+  WEDDING
+  CORPORATE
+  BIRTHDAY
+  FESTIVAL
+  CONCERT
+  OTHER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum RatingType {
+  CLIENT_TO_STAFF
+  STAFF_TO_CLIENT
+}

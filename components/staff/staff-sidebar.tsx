@@ -2,21 +2,23 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Home, Calendar, Activity, Users, Settings, Zap, X, ChevronLeft, MessageCircle, Plus } from "lucide-react"
+import { Home, Calendar, User, Wallet, MessageCircle, Settings, Clock, X, ChevronLeft, Briefcase, Star } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useAppContext } from "@/lib/context/app-context"
 import { cn } from "@/lib/utils"
 
-const sidebarItems = [
-  { id: "workers", label: "Create a Post", icon: Plus, href: "/workers" },
-  { id: "booking", label: "Bookings", icon: Users, href: "/booking" },
-  { id: "messages", label: "Messages", icon: MessageCircle, href: "/messages" },
-  { id: "staff", label: "Live Staff", icon: Activity, href: "/staff" },
+const staffSidebarItems = [
+  { id: "dashboard", label: "Dashboard", icon: Home, href: "/staff/dashboard" },
+  { id: "jobs", label: "Available Jobs", icon: Briefcase, href: "/staff/jobs" },
+  { id: "schedule", label: "My Schedule", icon: Calendar, href: "/staff/schedule" },
+  { id: "availability", label: "Availability", icon: Clock, href: "/staff/availability" },
+  { id: "messages", label: "Messages", icon: MessageCircle, href: "/staff/messages" },
+  { id: "earnings", label: "Earnings", icon: Wallet, href: "/staff/earnings" },
+  { id: "profile", label: "Profile", icon: User, href: "/staff/profile" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/staff/settings" },
 ]
 
-interface AppSidebarProps {
-  onQuickFill: () => void
+interface StaffSidebarProps {
   isOpen?: boolean
   onClose?: () => void
   isMobile?: boolean
@@ -24,26 +26,31 @@ interface AppSidebarProps {
   onToggleCollapse?: () => void
 }
 
-export function AppSidebar({ 
-  onQuickFill, 
+export function StaffSidebar({ 
   isOpen = true, 
   onClose, 
   isMobile = false,
   isCollapsed = false,
   onToggleCollapse
-}: AppSidebarProps) {
+}: StaffSidebarProps) {
   const pathname = usePathname()
-  const { state } = useAppContext()
+
+  // Mock data - replace with actual context/state
+  const staffStats = {
+    pendingJobs: 3,
+    unreadMessages: 2,
+    upcomingShifts: 1,
+    weeklyEarnings: 1250
+  }
 
   const getItemBadge = (itemId: string) => {
     switch (itemId) {
-      case "shifts":
-        return state.shifts?.filter((s) => s.status === "published").length || 0
-      case "staff":
-        return state.staff?.filter((s) => s.status === "active").length || 0
+      case "jobs":
+        return staffStats.pendingJobs || 0
       case "messages":
-        // Show unread messages count
-        return state.messages?.filter((m) => !m.isRead).length || 0
+        return staffStats.unreadMessages || 0
+      case "schedule":
+        return staffStats.upcomingShifts || 0
       default:
         return 0
     }
@@ -73,11 +80,24 @@ export function AppSidebar({
         <div className={cn("p-4 border-b border-gray-100", isCollapsed && !isMobile && "px-2")}>
           <div className="flex items-center justify-between">
             <div className="flex items-center min-w-0">
-              
+              {(!isCollapsed || isMobile) && (
                 <div className="flex items-center space-x-3">
-               { /* Logo */}
+                  <img 
+                    src="/asygn.png" 
+                    alt="Asygn Staff" 
+                    className="h-6 w-auto flex-shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900">Staff Portal</div>
+                    <div className="text-xs text-gray-500">Professional Dashboard</div>
+                  </div>
                 </div>
-              
+              )}
+              {isCollapsed && !isMobile && (
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-4 h-4 text-white" />
+                </div>
+              )}
             </div>
             
             {/* Mobile Close Button */}
@@ -109,7 +129,7 @@ export function AppSidebar({
         {/* Navigation */}
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
-            {sidebarItems.map((item) => {
+            {staffSidebarItems.map((item) => {
               const isActive = pathname === item.href
               const badgeCount = getItemBadge(item.id)
 
@@ -143,7 +163,9 @@ export function AppSidebar({
                                 ? "bg-orange-100 text-orange-700 border-orange-200"
                                 : item.id === "messages"
                                   ? "bg-blue-100 text-blue-700 border-blue-200"
-                                  : "bg-gray-100 text-gray-600 border-gray-200"
+                                  : item.id === "jobs"
+                                    ? "bg-green-100 text-green-700 border-green-200"
+                                    : "bg-gray-100 text-gray-600 border-gray-200"
                             )}
                           >
                             {badgeCount}
@@ -159,7 +181,8 @@ export function AppSidebar({
                         {badgeCount > 0 && (
                           <span className={cn(
                             "ml-2 px-1.5 py-0.5 rounded text-xs",
-                            item.id === "messages" ? "bg-blue-600" : "bg-gray-700"
+                            item.id === "messages" ? "bg-blue-600" : 
+                            item.id === "jobs" ? "bg-green-600" : "bg-gray-700"
                           )}>
                             {badgeCount}
                           </span>
@@ -173,51 +196,38 @@ export function AppSidebar({
           </ul>
         </nav>
 
-        {/* Quick Actions - Only show when not collapsed or on mobile */}
-        {(!isCollapsed || isMobile) && (
-          <div className="p-3 border-t border-gray-100">
-            <div className="bg-red-50 rounded-lg p-3 border border-red-100">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1 bg-red-100 rounded-md">
-                  <Zap className="h-3 w-3 text-red-600" />
-                </div>
-                <span className="font-medium text-red-900 text-xs">Emergency Fill</span>
-              </div>
-              <p className="text-xs text-red-700 mb-3">Need staff urgently?</p>
-              <Button
-                onClick={onQuickFill}
-                size="sm"
-                className="w-full bg-red-500 hover:bg-red-600 text-white shadow-sm text-xs"
-              >
-                <Zap className="h-3 w-3 mr-2" />
-                Quick Fill
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Footer Stats - Simplified for collapsed state */}
+        {/* Quick Stats */}
         <div className="p-3 border-t border-gray-100 bg-gray-50/50">
           {!isCollapsed || isMobile ? (
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="bg-white rounded-md p-2 border border-gray-200">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.activeShifts || 0}</p>
-                <p className="text-xs text-gray-500">Active</p>
+            <div className="space-y-3">
+              <div className="bg-white rounded-md p-3 border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-700">This Week</span>
+                  <Star className="h-3 w-3 text-yellow-500" />
+                </div>
+                <div className="text-lg font-semibold text-gray-900">${staffStats.weeklyEarnings}</div>
+                <div className="text-xs text-gray-500">Earnings</div>
               </div>
-              <div className="bg-white rounded-md p-2 border border-gray-200">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.totalStaff || 0}</p>
-                <p className="text-xs text-gray-500">Staff</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white rounded-md p-2 border border-gray-200 text-center">
+                  <div className="text-sm font-semibold text-gray-900">{staffStats.upcomingShifts}</div>
+                  <div className="text-xs text-gray-500">Upcoming</div>
+                </div>
+                <div className="bg-white rounded-md p-2 border border-gray-200 text-center">
+                  <div className="text-sm font-semibold text-gray-900">4.8</div>
+                  <div className="text-xs text-gray-500">Rating</div>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center space-y-2">
+            <div className="flex flex-col items-center space-y-3">
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.activeShifts || 0}</p>
-                <div className="w-2 h-2 bg-green-500 rounded-full mx-auto"></div>
+                <div className="text-sm font-semibold text-gray-900">${(staffStats.weeklyEarnings / 1000).toFixed(1)}k</div>
+                <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mt-1"></div>
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.totalStaff || 0}</p>
-                <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>
+                <div className="text-sm font-semibold text-gray-900">4.8</div>
+                <div className="w-2 h-2 bg-yellow-500 rounded-full mx-auto mt-1"></div>
               </div>
             </div>
           )}

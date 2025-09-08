@@ -46,8 +46,6 @@ const mockContext = {
 }
 
 interface AppHeaderProps {
-  title: string
-  subtitle: string
   onCreateShift?: () => void
   onMenuClick?: () => void
   showMenuButton?: boolean
@@ -56,8 +54,6 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({
-  title,
-  subtitle,
   onCreateShift,
   onMenuClick,
   showMenuButton = false,
@@ -87,26 +83,15 @@ export function AppHeader({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="text-xl lg:text-2xl font-semibold text-gray-900 truncate">
-                  {title}
-                </h1>
+                 <img 
+                    src="/asygn.png" 
+                    alt="Asygn" 
+                    className="h-6 w-auto flex-shrink-0"
+                  />
                 <div className="flex items-center gap-4 mt-0.5">
-                  <p className="text-gray-600 text-sm truncate">{subtitle}</p>
-                  {/* Human-friendly quick context */}
-                  <div className="hidden md:flex items-center gap-3 text-xs text-gray-500">
-                    {state.quickStats.todayEvents > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{state.quickStats.todayEvents} events today</span>
-                      </div>
-                    )}
-                    {state.quickStats.nextEventTime && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>Next at {state.quickStats.nextEventTime}</span>
-                      </div>
-                    )}
-                  </div>
+                  
+                 
+                  
                 </div>
               </div>
             </div>

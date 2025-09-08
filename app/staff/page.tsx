@@ -4,8 +4,7 @@ import { StaffContent } from "@/components/pages/staff-content"
 export default function StaffPage() {
   return (
     <MainLayout 
-    title="Staff" 
-    subtitle=""
+  
     showCreateShift={false}
   >
       <StaffContent />

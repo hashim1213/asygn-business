@@ -2,20 +2,14 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { AppSidebar } from "./app-sidebar"
-import { AppHeader } from "./app-header"
-import { QuickFillModal } from "../modals/quick-fill-modal"
+import { StaffSidebar } from "./staff-sidebar"
+import { StaffHeader } from "./staff-header"
 
-interface MainLayoutProps {
+interface StaffMainLayoutProps {
   children: React.ReactNode
-  showCreateShift?: boolean
 }
 
-export function MainLayout({ 
-  children,  
-  showCreateShift = true 
-}: MainLayoutProps) {
-  const [showQuickFill, setShowQuickFill] = useState(false)
+export function StaffMainLayout({ children }: StaffMainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -36,14 +30,9 @@ export function MainLayout({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const handleCreateShift = () => {
-    console.log("Create shift clicked")
-  }
-
   return (
     <div className="flex h-screen bg-gray-50">
-      <AppSidebar 
-        onQuickFill={() => setShowQuickFill(true)}
+      <StaffSidebar 
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isMobile={isMobile}
@@ -52,22 +41,17 @@ export function MainLayout({
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <AppHeader 
-          onCreateShift={showCreateShift ? handleCreateShift : undefined}
+        <StaffHeader 
           onMenuClick={() => setSidebarOpen(true)}
           showMenuButton={isMobile}
-          notificationCount={3} // Example notification count
+          notificationCount={2}
+          messageCount={5}
         />
         
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
-      
-      <QuickFillModal 
-        isOpen={showQuickFill} 
-        onClose={() => setShowQuickFill(false)} 
-      />
     </div>
   )
 }

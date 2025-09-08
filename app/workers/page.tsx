@@ -3,8 +3,9 @@ import AsygnWorkersPlatform from "@/components/pages/workers-content"
 
 export default function WorkersPage() {
   return (
-    <MainLayout title="Workers" subtitle="" showCreateShift={false}>
+    <MainLayout  showCreateShift={false}>
       <AsygnWorkersPlatform />
     </MainLayout>
   )
 }
+ 
