@@ -29,7 +29,14 @@ import {
   AlertCircle,
   TrendingUp,
   CalendarDays,
-  Briefcase
+  Briefcase,
+  Grid3X3,
+  List,
+  Phone,
+  Mail,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 
 interface StaffMember {
@@ -99,6 +106,8 @@ export default function BookingManagement() {
   const [editingBooking, setEditingBooking] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Booking>>({})
   const [showQuickActions, setShowQuickActions] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards')
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchBookings()
@@ -183,6 +192,16 @@ export default function BookingManagement() {
     }
   }
 
+  const toggleRowExpansion = (bookingId: string) => {
+    const newExpanded = new Set(expandedRows)
+    if (newExpanded.has(bookingId)) {
+      newExpanded.delete(bookingId)
+    } else {
+      newExpanded.add(bookingId)
+    }
+    setExpandedRows(newExpanded)
+  }
+
   const getBookingStats = () => {
     const total = bookings.length
     const confirmed = bookings.filter(b => b.status === 'confirmed').length
@@ -194,6 +213,247 @@ export default function BookingManagement() {
   }
 
   const stats = getBookingStats()
+
+  const renderListView = () => {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {/* Table Header */}
+        <div className="bg-gray-50 border-b border-gray-200">
+          <div className="grid grid-cols-12 gap-4 px-6 py-3 text-sm font-medium text-gray-700">
+            <div className="col-span-1"></div>
+            <div className="col-span-3">Event</div>
+            <div className="col-span-2">Date & Time</div>
+            <div className="col-span-2">Venue</div>
+            <div className="col-span-1">Staff</div>
+            <div className="col-span-1">Status</div>
+            <div className="col-span-1">Cost</div>
+            <div className="col-span-1">Actions</div>
+          </div>
+        </div>
+
+        {/* Table Body */}
+        <div className="divide-y divide-gray-200">
+          {filteredBookings.map((booking) => {
+            const isExpanded = expandedRows.has(booking.id)
+            const confirmedStaff = booking.staffMembers.filter(s => s.status === 'confirmed').length
+            const totalStaff = booking.staffMembers.length
+
+            return (
+              <div key={booking.id}>
+                {/* Main Row */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+                  {/* Expand Button */}
+                  <div className="col-span-1 flex items-center">
+                    <button
+                      onClick={() => toggleRowExpansion(booking.id)}
+                      className="p-1 hover:bg-gray-200 rounded"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Event */}
+                  <div className="col-span-3">
+                    <div className="font-medium text-gray-900 truncate">{booking.eventTitle}</div>
+                    <div className="text-sm text-gray-500 truncate">{booking.eventType}</div>
+                  </div>
+
+                  {/* Date & Time */}
+                  <div className="col-span-2">
+                    <div className="text-sm font-medium text-gray-900">
+                      {new Date(booking.date).toLocaleDateString()}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {booking.startTime} - {booking.endTime}
+                    </div>
+                  </div>
+
+                  {/* Venue */}
+                  <div className="col-span-2">
+                    <div className="text-sm text-gray-900 truncate">{booking.venue}</div>
+                    {booking.guestCount && (
+                      <div className="text-sm text-gray-500">{booking.guestCount} guests</div>
+                    )}
+                  </div>
+
+                  {/* Staff */}
+                  <div className="col-span-1">
+                    <div className="text-sm font-medium text-gray-900">
+                      {confirmedStaff}/{totalStaff}
+                    </div>
+                    <div className="text-sm text-gray-500">confirmed</div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="col-span-1">
+                    <Badge className={`${getStatusColor(booking.status)} text-xs border`}>
+                      {booking.status}
+                    </Badge>
+                  </div>
+
+                  {/* Cost */}
+                  <div className="col-span-1">
+                    <div className="text-sm font-medium text-gray-900">
+                      ${booking.totalCost}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="col-span-1">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.location.href = `/booking/${booking.id}`}
+                        className="p-1 h-6 w-6"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingBooking(booking.id)
+                          setEditForm(booking)
+                        }}
+                        className="p-1 h-6 w-6"
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Row Content */}
+                {isExpanded && (
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Event Details */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Event Details</h4>
+                        <div className="space-y-2 text-sm">
+                          {booking.specialInstructions && (
+                            <div>
+                              <span className="text-gray-500">Instructions:</span>
+                              <p className="text-gray-900 mt-1">{booking.specialInstructions}</p>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-gray-500">Subtotal:</span>
+                              <span className="text-gray-900 ml-2">${booking.subtotal}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Platform Fee:</span>
+                              <span className="text-gray-900 ml-2">${booking.platformFee}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Staff Details */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Staff Team</h4>
+                        <div className="space-y-3">
+                          {booking.staffMembers.map((staff) => {
+                            const Icon = getStaffIcon(staff.role)
+                            return (
+                              <div key={staff.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                                    <Icon className="w-4 h-4 text-orange-600" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-gray-900 text-sm">{staff.name}</div>
+                                    <div className="text-gray-500 text-xs">{staff.role} • ${staff.hourlyRate}/hr</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`${getStatusColor(staff.status)} text-xs border`}>
+                                    {staff.status}
+                                  </Badge>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="p-1 h-6 w-6"
+                                      onClick={() => window.open(`tel:${staff.phone}`)}
+                                    >
+                                      <Phone className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="p-1 h-6 w-6"
+                                      onClick={() => window.open(`mailto:${staff.email}`)}
+                                    >
+                                      <Mail className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="p-1 h-6 w-6"
+                                      onClick={() => setSelectedStaff(selectedStaff === staff.id ? null : staff.id)}
+                                    >
+                                      <MessageSquare className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Message Interface */}
+                    {selectedStaff && booking.staffMembers.some(s => s.id === selectedStaff) && (
+                      <div className="mt-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Quick message to staff..."
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            onKeyPress={(e) => e.key === 'Enter' && sendQuickMessage(selectedStaff, booking.id)}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => sendQuickMessage(selectedStaff, booking.id)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-3"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {filteredBookings.length === 0 && (
+          <div className="text-center py-16">
+            <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+            <p className="text-gray-600">
+              {searchTerm || filterStatus !== 'all' 
+                ? 'Try adjusting your search or filter criteria.'
+                : 'Get started by creating your first event booking.'
+              }
+            </p>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const renderBookingCard = (booking: Booking) => {
     const isEditing = editingBooking === booking.id
@@ -506,6 +766,32 @@ export default function BookingManagement() {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* View Toggle */}
+              <div className="flex items-center border border-gray-200 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'cards' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  title="Card View"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'list' 
+                      ? 'bg-orange-500 text-white' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  title="List View"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -533,11 +819,15 @@ export default function BookingManagement() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredBookings.map(booking => renderBookingCard(booking))}
-        </div>
+        {viewMode === 'list' ? (
+          renderListView()
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredBookings.map(booking => renderBookingCard(booking))}
+          </div>
+        )}
 
-        {filteredBookings.length === 0 && (
+        {viewMode === 'cards' && filteredBookings.length === 0 && (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalendarDays className="w-8 h-8 text-orange-600" />

@@ -45,7 +45,7 @@ export default function SignInPage() {
         
         // Redirect based on role
         if (session?.user?.role === 'STAFF') {
-          router.push('/dashboard')
+          router.push('/staff/dashboard')
         } else {
           router.push('/booking')
         }
@@ -67,7 +67,7 @@ export default function SignInPage() {
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
                 <Coffee className="w-6 h-6 text-orange-600" />
               </div>
-              <h1 className="text-2xl font-bold text-white">StaffConnect</h1>
+              <h1 className="text-2xl font-bold text-white">Asygn</h1>
             </div>
             
             <div className="max-w-md">
@@ -96,7 +96,7 @@ export default function SignInPage() {
           </div>
           
           <div className="text-orange-100 text-sm">
-            © 2024 StaffConnect. All rights reserved.
+            © 2025 Asygn. All rights reserved.
           </div>
         </div>
 

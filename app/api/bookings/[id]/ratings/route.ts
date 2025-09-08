@@ -1,14 +1,34 @@
 // app/api/bookings/[id]/ratings/route.ts
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const prisma = new PrismaClient()
 
-export async function POST(
+export async function POST_RATINGS(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session || !session.user || !session.user.email) {
+      return NextResponse.json({ 
+        error: 'Unauthorized - Please sign in to submit ratings' 
+      }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'User not found in database' 
+      }, { status: 404 })
+    }
+
     const bookingId = params.id
     const { staffId, rating, review } = await request.json()
 
@@ -19,21 +39,12 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Get the current client
-    const client = await prisma.user.findFirst({
-      where: { role: 'CLIENT' }
-    })
-
-    if (!client) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
-    }
-
-    // Verify the booking belongs to this client and is completed
+    // Verify the booking belongs to this user and is completed
     const booking = await prisma.booking.findFirst({
       where: {
         id: bookingId,
-        clientId: client.id,
-        status: 'COMPLETED' // Only allow ratings for completed bookings
+        clientId: user.id,
+        status: 'COMPLETED'
       }
     })
 
@@ -58,7 +69,7 @@ export async function POST(
     const existingRating = await prisma.rating.findFirst({
       where: {
         bookingId: bookingId,
-        raterId: client.id,
+        raterId: user.id,
         rateeId: staff.userId
       }
     })
@@ -73,7 +84,7 @@ export async function POST(
     const newRating = await prisma.rating.create({
       data: {
         bookingId: bookingId,
-        raterId: client.id,
+        raterId: user.id,
         rateeId: staff.userId,
         rating: rating,
         review: review || null,
@@ -94,7 +105,8 @@ export async function POST(
     await prisma.staffProfile.update({
       where: { id: staffId },
       data: {
-        rating: parseFloat(averageRating.toFixed(1))
+        rating: parseFloat(averageRating.toFixed(1)),
+        reviewCount: allRatings.length
       }
     })
 
@@ -112,27 +124,36 @@ export async function POST(
   }
 }
 
-export async function GET(
+export async function GET_RATINGS(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const bookingId = params.id
+    const session = await getServerSession(authOptions)
     
-    // Get the current client
-    const client = await prisma.user.findFirst({
-      where: { role: 'CLIENT' }
-    })
-
-    if (!client) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    if (!session || !session.user || !session.user.email) {
+      return NextResponse.json({ 
+        error: 'Unauthorized - Please sign in to view ratings' 
+      }, { status: 401 })
     }
 
-    // Get all ratings for this booking made by this client
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'User not found in database' 
+      }, { status: 404 })
+    }
+
+    const bookingId = params.id
+
+    // Get all ratings for this booking made by this user
     const ratings = await prisma.rating.findMany({
       where: {
         bookingId: bookingId,
-        raterId: client.id,
+        raterId: user.id,
         ratingType: 'CLIENT_TO_STAFF'
       },
       include: {

@@ -76,6 +76,13 @@ export function AppSidebar({
               
                 <div className="flex items-center space-x-3">
                { /* Logo */}
+               
+                  
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900">Business Portal</div>
+                   
+                  </div>
+               
                 </div>
               
             </div>
@@ -173,55 +180,9 @@ export function AppSidebar({
           </ul>
         </nav>
 
-        {/* Quick Actions - Only show when not collapsed or on mobile */}
-        {(!isCollapsed || isMobile) && (
-          <div className="p-3 border-t border-gray-100">
-            <div className="bg-red-50 rounded-lg p-3 border border-red-100">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1 bg-red-100 rounded-md">
-                  <Zap className="h-3 w-3 text-red-600" />
-                </div>
-                <span className="font-medium text-red-900 text-xs">Emergency Fill</span>
-              </div>
-              <p className="text-xs text-red-700 mb-3">Need staff urgently?</p>
-              <Button
-                onClick={onQuickFill}
-                size="sm"
-                className="w-full bg-red-500 hover:bg-red-600 text-white shadow-sm text-xs"
-              >
-                <Zap className="h-3 w-3 mr-2" />
-                Quick Fill
-              </Button>
-            </div>
-          </div>
-        )}
+     
 
-        {/* Footer Stats - Simplified for collapsed state */}
-        <div className="p-3 border-t border-gray-100 bg-gray-50/50">
-          {!isCollapsed || isMobile ? (
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="bg-white rounded-md p-2 border border-gray-200">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.activeShifts || 0}</p>
-                <p className="text-xs text-gray-500">Active</p>
-              </div>
-              <div className="bg-white rounded-md p-2 border border-gray-200">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.totalStaff || 0}</p>
-                <p className="text-xs text-gray-500">Staff</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center space-y-2">
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.activeShifts || 0}</p>
-                <div className="w-2 h-2 bg-green-500 rounded-full mx-auto"></div>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-900">{state.stats?.totalStaff || 0}</p>
-                <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>
-              </div>
-            </div>
-          )}
-        </div>
+      
       </div>
     </>
   )

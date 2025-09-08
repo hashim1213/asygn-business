@@ -25,7 +25,13 @@ import {
   Building2,
   AlertCircle,
   DollarSign,
-  Shield
+  Shield,
+  Search,
+  Filter,
+  RefreshCw,
+  UserCheck,
+  UserX,
+  SlidersHorizontal
 } from 'lucide-react'
 
 interface StaffType {
@@ -43,6 +49,15 @@ interface StaffMember {
   distance: number
   profileImg: string
   hourlyRate: number
+  staffType: string
+  available: boolean
+  bio?: string
+  skills?: string[]
+  verified: boolean
+  completedJobs: number
+  responseTime: string
+  lastActive: string
+  selected?: boolean
 }
 
 interface StaffRequest {
@@ -71,11 +86,19 @@ interface PaymentMethod {
   isDefault: boolean
 }
 
+interface SearchFilters {
+  minRating: number
+  maxDistance: number
+  sortBy: 'distance' | 'rating' | 'rate' | 'experience'
+  verified: boolean
+  available: boolean
+}
+
 const staffTypes: StaffType[] = [
-  { id: 'bartender', name: 'Bartender', icon: Coffee, rate: 35 },
-  { id: 'server', name: 'Server', icon: Utensils, rate: 25 },
-  { id: 'barback', name: 'Barback', icon: Package, rate: 20 },
-  { id: 'event-crew', name: 'Event Crew', icon: Headphones, rate: 22 }
+  { id: 'BARTENDER', name: 'Bartender', icon: Coffee, rate: 35 },
+  { id: 'SERVER', name: 'Server', icon: Utensils, rate: 25 },
+  { id: 'BARBACK', name: 'Barback', icon: Package, rate: 20 },
+  { id: 'EVENT_CREW', name: 'Event Crew', icon: Headphones, rate: 22 }
 ]
 
 const jobTypes = [
@@ -90,12 +113,25 @@ const mockPaymentMethods: PaymentMethod[] = [
   { id: '2', type: 'card', last4: '1234', brand: 'Mastercard', isDefault: false }
 ]
 
-export default function ImprovedStaffHiring() {
+export default function EnhancedStaffSelection() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
-  const [availableStaff, setAvailableStaff] = useState<any[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [availableStaff, setAvailableStaff] = useState<StaffMember[]>([])
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember[]>([])
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(mockPaymentMethods[0].id)
+  const [showFilters, setShowFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    minRating: 0,
+    maxDistance: 25,
+    sortBy: 'distance',
+    verified: false,
+    available: true
+  })
+
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
     jobTitle: '',
     jobType: 'event',
@@ -155,67 +191,175 @@ export default function ImprovedStaffHiring() {
     }
   }
 
-  const searchStaff = async () => {
-    setLoading(true)
+  const searchStaff = async (refreshSearch = false) => {
+    setSearchLoading(true)
     try {
-      // Mock API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // API call to search for staff
+      const searchParams = new URLSearchParams({
+        location: bookingDetails.location,
+        date: bookingDetails.date,
+        startTime: bookingDetails.startTime,
+        endTime: bookingDetails.endTime,
+        radius: bookingDetails.radius.toString(),
+        staffTypes: bookingDetails.staffRequests.map(r => r.type).join(','),
+        minRating: searchFilters.minRating.toString(),
+        maxDistance: searchFilters.maxDistance.toString(),
+        sortBy: searchFilters.sortBy,
+        verified: searchFilters.verified.toString(),
+        available: searchFilters.available.toString()
+      })
+
+      if (searchQuery) {
+        searchParams.append('search', searchQuery)
+      }
+
+      const response = await fetch(`/api/staff/search?${searchParams}`)
       
-      // Mock available staff data
-      const mockStaff = bookingDetails.staffRequests.map(request => ({
-        type: request.type,
-        quantity: request.quantity,
-        staff: Array.from({ length: Math.max(request.quantity, 5) }, (_, i) => ({
-          id: `${request.type}-${i}`,
-          name: `${request.type.charAt(0).toUpperCase() + request.type.slice(1)} ${i + 1}`,
-          rating: 4.2 + Math.random() * 0.8,
-          experience: `${2 + Math.floor(Math.random() * 8)} years experience`,
-          distance: Math.random() * bookingDetails.radius,
-          profileImg: `https://images.unsplash.com/photo-${1500000000000 + i}?w=100&h=100&fit=crop&crop=face`,
-          hourlyRate: staffTypes.find(t => t.id === request.type)?.rate || 25
-        }))
-      }))
+      if (!response.ok) {
+        throw new Error('Failed to search staff')
+      }
+
+      const data = await response.json()
       
-      setAvailableStaff(mockStaff)
-      setStep(2)
+      // Generate mock data that matches your database structure
+      const mockStaff: StaffMember[] = []
+      
+      for (const request of bookingDetails.staffRequests) {
+        const staffType = staffTypes.find(t => t.id === request.type)
+        if (!staffType) continue
+        
+        for (let i = 0; i < Math.max(request.quantity * 3, 8); i++) {
+          mockStaff.push({
+            id: `staff_${request.type}_${i}`,
+            name: `${staffType.name} ${i + 1}`,
+            rating: 4.0 + Math.random() * 1.0,
+            experience: `${2 + Math.floor(Math.random() * 8)} years`,
+            distance: Math.random() * bookingDetails.radius,
+            profileImg: `https://api.dicebear.com/7.x/personas/svg?seed=${request.type}${i}`,
+            hourlyRate: staffType.rate + Math.floor(Math.random() * 10) - 5,
+            staffType: request.type,
+            available: Math.random() > 0.1,
+            bio: `Experienced ${staffType.name.toLowerCase()} with expertise in ${bookingDetails.jobType} events.`,
+            skills: ['Professional Service', 'Team Player', 'Punctual', 'Flexible'],
+            verified: Math.random() > 0.3,
+            completedJobs: Math.floor(Math.random() * 100) + 10,
+            responseTime: Math.random() > 0.5 ? '< 1 hour' : '< 30 mins',
+            lastActive: Math.random() > 0.5 ? 'Online now' : 'Active today',
+            selected: false
+          })
+        }
+      }
+
+      // Apply filters
+      let filteredStaff = mockStaff.filter(staff => {
+        if (searchFilters.minRating > 0 && staff.rating < searchFilters.minRating) return false
+        if (staff.distance > searchFilters.maxDistance) return false
+        if (searchFilters.verified && !staff.verified) return false
+        if (searchFilters.available && !staff.available) return false
+        if (searchQuery && !staff.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
+        return true
+      })
+
+      // Apply sorting
+      filteredStaff.sort((a, b) => {
+        switch (searchFilters.sortBy) {
+          case 'rating':
+            return b.rating - a.rating
+          case 'rate':
+            return a.hourlyRate - b.hourlyRate
+          case 'experience':
+            return parseInt(b.experience) - parseInt(a.experience)
+          case 'distance':
+          default:
+            return a.distance - b.distance
+        }
+      })
+
+      setAvailableStaff(filteredStaff)
+      if (!refreshSearch) {
+        setStep(2)
+      }
     } catch (error) {
       console.error('Search error:', error)
+      alert('Failed to search for staff. Please try again.')
     } finally {
-      setLoading(false)
+      setSearchLoading(false)
+    }
+  }
+
+  const toggleStaffSelection = (staff: StaffMember) => {
+    const isSelected = selectedStaff.some(s => s.id === staff.id)
+    
+    if (isSelected) {
+      setSelectedStaff(selectedStaff.filter(s => s.id !== staff.id))
+    } else {
+      // Check if we can add more staff of this type
+      const staffTypeRequest = bookingDetails.staffRequests.find(r => r.type === staff.staffType)
+      const currentSelectedOfType = selectedStaff.filter(s => s.staffType === staff.staffType).length
+      
+      if (staffTypeRequest && currentSelectedOfType < staffTypeRequest.quantity) {
+        setSelectedStaff([...selectedStaff, staff])
+      } else {
+        alert(`You can only select ${staffTypeRequest?.quantity || 0} ${staff.staffType.toLowerCase()}(s)`)
+      }
     }
   }
 
   const proceedToPayment = () => {
+    // Validate that we have selected the right number of staff
+    const requiredStaff = bookingDetails.staffRequests.reduce((sum, req) => sum + req.quantity, 0)
+    
+    if (selectedStaff.length !== requiredStaff) {
+      alert(`Please select exactly ${requiredStaff} staff members`)
+      return
+    }
+
     setStep(3)
   }
 
   const processPayment = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/bookings', {
+      // Prepare event details for API
+      const eventDetails = {
+        title: bookingDetails.jobTitle,
+        description: bookingDetails.description,
+        venue: bookingDetails.venue,
+        address: bookingDetails.location,
+        date: bookingDetails.date,
+        startTime: bookingDetails.startTime,
+        endTime: bookingDetails.endTime,
+        eventType: bookingDetails.jobType,
+        guestCount: null
+      }
+
+      // Prepare selected staff for API
+      const selectedStaffData = selectedStaff.map(staff => ({
+        staffId: staff.id,
+        hourlyRate: staff.hourlyRate,
+        staffType: staff.staffType
+      }))
+
+      // Prepare requirements
+      const requirements = bookingDetails.staffRequests.map(req => ({
+        staffType: req.type,
+        quantity: req.quantity,
+        hourlyRate: staffTypes.find(t => t.id === req.type)?.rate || 0
+      }))
+
+      const response = await fetch('/api/bookings/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          jobTitle: bookingDetails.jobTitle,
-          jobType: bookingDetails.jobType,
-          venue: bookingDetails.venue,
-          location: bookingDetails.location,
-          date: bookingDetails.date,
-          startTime: bookingDetails.startTime,
-          endTime: bookingDetails.endTime,
-          description: bookingDetails.description,
-          staffRequests: bookingDetails.staffRequests.map(req => ({
-            type: req.type,
-            quantity: req.quantity,
-            hourlyRate: staffTypes.find(t => t.id === req.type)?.rate || 0
-          })),
-          clientId: 'temp-client-id' // This will be replaced with actual auth
+          eventDetails,
+          selectedStaff: selectedStaffData,
+          requirements
         })
       })
       
       if (response.ok) {
         const data = await response.json()
-        setBookingId(data.bookingId)
+        setBookingId(data.booking.id)
         setStep(4)
       } else {
         const error = await response.json()
@@ -325,27 +469,55 @@ export default function ImprovedStaffHiring() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-900">Start</label>
+            <label className="block text-sm font-medium mb-2 text-gray-900">Start Time</label>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="time"
+              <select
                 value={bookingDetails.startTime}
                 onChange={(e) => setBookingDetails({...bookingDetails, startTime: e.target.value})}
-                className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+                className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
+              >
+                <option value="">Select start time</option>
+                {Array.from({ length: 48 }, (_, i) => {
+                  const hour = Math.floor(i / 2)
+                  const minute = i % 2 === 0 ? '00' : '30'
+                  const time24 = `${hour.toString().padStart(2, '0')}:${minute}`
+                  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                  const ampm = hour < 12 ? 'AM' : 'PM'
+                  const display = `${hour12}:${minute} ${ampm}`
+                  return (
+                    <option key={i} value={time24}>
+                      {display}
+                    </option>
+                  )
+                })}
+              </select>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-900">End</label>
+            <label className="block text-sm font-medium mb-2 text-gray-900">End Time</label>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="time"
+              <select
                 value={bookingDetails.endTime}
                 onChange={(e) => setBookingDetails({...bookingDetails, endTime: e.target.value})}
-                className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+                className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
+              >
+                <option value="">Select end time</option>
+                {Array.from({ length: 48 }, (_, i) => {
+                  const hour = Math.floor(i / 2)
+                  const minute = i % 2 === 0 ? '00' : '30'
+                  const time24 = `${hour.toString().padStart(2, '0')}:${minute}`
+                  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                  const ampm = hour < 12 ? 'AM' : 'PM'
+                  const display = `${hour12}:${minute} ${ampm}`
+                  return (
+                    <option key={i} value={time24}>
+                      {display}
+                    </option>
+                  )
+                })}
+              </select>
             </div>
           </div>
         </div>
@@ -452,8 +624,17 @@ export default function ImprovedStaffHiring() {
         </div>
 
         <button
-          onClick={searchStaff}
-          disabled={loading || !bookingDetails.jobTitle || !bookingDetails.venue || !bookingDetails.location || !bookingDetails.date || !bookingDetails.startTime || !bookingDetails.endTime || bookingDetails.staffRequests.length === 0}
+          onClick={() => searchStaff()}
+          disabled={
+            loading || 
+            !bookingDetails.jobTitle.trim() || 
+            !bookingDetails.venue.trim() || 
+            !bookingDetails.location.trim() || 
+            !bookingDetails.date || 
+            !bookingDetails.startTime || 
+            !bookingDetails.endTime || 
+            bookingDetails.staffRequests.length === 0
+          }
           className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
         >
           {loading ? (
@@ -472,96 +653,360 @@ export default function ImprovedStaffHiring() {
     </div>
   )
 
-  const renderMatchStep = () => {
-    const totalStaff = bookingDetails.staffRequests.reduce((sum, req) => sum + req.quantity, 0)
+  const renderStaffSelectionStep = () => {
+    const totalNeeded = bookingDetails.staffRequests.reduce((sum, req) => sum + req.quantity, 0)
+    const totalSelected = selectedStaff.length
+    
+    const groupedStaff = availableStaff.reduce((groups, staff) => {
+      if (!groups[staff.staffType]) {
+        groups[staff.staffType] = []
+      }
+      groups[staff.staffType].push(staff)
+      return groups
+    }, {} as Record<string, StaffMember[]>)
     
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">{bookingDetails.jobTitle}</h1>
             <p className="text-gray-600">
-              {totalStaff} professionals available for {new Date(bookingDetails.date).toLocaleDateString()}
+              Select {totalNeeded} professionals for {new Date(bookingDetails.date).toLocaleDateString()}
             </p>
+            <div className="flex items-center gap-4 mt-2">
+              <span className="text-sm text-gray-500">
+                {totalSelected} of {totalNeeded} selected
+              </span>
+              <div className="w-32 bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(totalSelected / totalNeeded) * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => setStep(1)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-          >
-            <Edit className="w-4 h-4" />
-            Edit Details
-          </button>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setStep(1)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Details
+            </button>
+            
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          {availableStaff.map((staffGroup) => {
-            const staffType = staffTypes.find(t => t.id === staffGroup.type)
-            const Icon = staffType?.icon || Users
+        {/* Search and Filters Bar */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, skills, or experience..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <select
+                value={searchFilters.sortBy}
+                onChange={(e) => setSearchFilters({...searchFilters, sortBy: e.target.value as any})}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+              >
+                <option value="distance">Sort by Distance</option>
+                <option value="rating">Sort by Rating</option>
+                <option value="rate">Sort by Rate (Low to High)</option>
+                <option value="experience">Sort by Experience</option>
+              </select>
+              
+              <button
+                onClick={() => searchStaff(true)}
+                disabled={searchLoading}
+                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${searchLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Advanced Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Min Rating</label>
+                  <select
+                    value={searchFilters.minRating}
+                    onChange={(e) => setSearchFilters({...searchFilters, minRating: parseFloat(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  >
+                    <option value={0}>Any Rating</option>
+                    <option value={3}>3+ Stars</option>
+                    <option value={4}>4+ Stars</option>
+                    <option value={4.5}>4.5+ Stars</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Max Distance</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="25"
+                    value={searchFilters.maxDistance}
+                    onChange={(e) => setSearchFilters({...searchFilters, maxDistance: parseInt(e.target.value)})}
+                    className="w-full"
+                  />
+                  <div className="text-xs text-gray-500 text-center">{searchFilters.maxDistance} miles</div>
+                </div>
+                
+                <div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={searchFilters.verified}
+                      onChange={(e) => setSearchFilters({...searchFilters, verified: e.target.checked})}
+                      className="rounded text-orange-500 focus:ring-orange-500"
+                    />
+                    Verified Only
+                  </label>
+                </div>
+                
+                <div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={searchFilters.available}
+                      onChange={(e) => setSearchFilters({...searchFilters, available: e.target.checked})}
+                      className="rounded text-orange-500 focus:ring-orange-500"
+                    />
+                    Available Only
+                  </label>
+                </div>
+              </div>
+              
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => searchStaff(true)}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Staff Categories */}
+        <div className="space-y-8">
+          {Object.entries(groupedStaff).map(([staffType, staffList]) => {
+            const typeInfo = staffTypes.find(t => t.id === staffType)
+            const Icon = typeInfo?.icon || Users
+            const neededForType = bookingDetails.staffRequests.find(r => r.type === staffType)?.quantity || 0
+            const selectedForType = selectedStaff.filter(s => s.staffType === staffType).length
 
             return (
-              <div key={staffGroup.type} className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-orange-600" />
+              <div key={staffType} className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {typeInfo?.name}s
+                      </h3>
+                      <p className="text-gray-600 text-sm">
+                        Select {neededForType} • {selectedForType} selected • ${typeInfo?.rate}/hour
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {staffGroup.quantity} {staffType?.name}(s)
-                    </h3>
-                    <p className="text-gray-600 text-sm">${staffType?.rate}/hour each</p>
+                  
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">{staffList.length} available</div>
+                    <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-1">
+                      <div 
+                        className="bg-orange-500 h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: `${(selectedForType / neededForType) * 100}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {staffGroup.staff.slice(0, staffGroup.quantity).map((staff: StaffMember, index: number) => (
-                    <div key={staff.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm">
-                          {staff.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 text-sm truncate">{staff.name}</h4>
-                          <p className="text-xs text-gray-600 mb-1">{staff.experience}</p>
-                          <div className="flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs font-medium">{staff.rating.toFixed(1)}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {staffList.map((staff) => {
+                    const isSelected = selectedStaff.some(s => s.id === staff.id)
+                    const canSelect = selectedForType < neededForType || isSelected
+                    
+                    return (
+                      <div 
+                        key={staff.id} 
+                        className={`border-2 rounded-lg p-4 transition-all cursor-pointer ${
+                          isSelected 
+                            ? 'border-orange-500 bg-orange-50' 
+                            : canSelect
+                              ? 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+                              : 'border-gray-200 opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => canSelect && toggleStaffSelection(staff)}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                              {staff.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-gray-900 text-sm truncate">{staff.name}</h4>
+                                {staff.verified && (
+                                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 mb-1">{staff.experience}</p>
+                              <div className="flex items-center gap-1 mb-2">
+                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                <span className="text-xs font-medium">{staff.rating.toFixed(1)}</span>
+                                <span className="text-xs text-gray-500">({staff.completedJobs} jobs)</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-1">
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                              isSelected 
+                                ? 'border-orange-500 bg-orange-500' 
+                                : 'border-gray-300'
+                            }`}>
+                              {isSelected && <UserCheck className="w-3 h-3 text-white" />}
+                            </div>
+                            <span className="text-xs font-medium text-gray-900">${staff.hourlyRate}/hr</span>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600">{staff.distance.toFixed(1)} mi away</span>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-green-700 font-medium">Available</span>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">{staff.distance.toFixed(1)} mi away</span>
+                            <div className="flex items-center gap-1">
+                              <div className={`w-2 h-2 rounded-full ${
+                                staff.available ? 'bg-green-500' : 'bg-gray-400'
+                              }`}></div>
+                              <span className={`font-medium ${
+                                staff.available ? 'text-green-700' : 'text-gray-500'
+                              }`}>
+                                {staff.available ? 'Available' : 'Busy'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {staff.bio && (
+                            <p className="text-xs text-gray-600 line-clamp-2">{staff.bio}</p>
+                          )}
+                          
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">Response: {staff.responseTime}</span>
+                            <span className="text-gray-500">{staff.lastActive}</span>
+                          </div>
+                          
+                          {staff.skills && staff.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {staff.skills.slice(0, 2).map((skill, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {staff.skills.length > 2 && (
+                                <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                  +{staff.skills.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
+                
+                {staffList.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>No {typeInfo?.name.toLowerCase()}s found matching your criteria</p>
+                    <button
+                      onClick={() => {
+                        setSearchFilters({
+                          minRating: 0,
+                          maxDistance: 25,
+                          sortBy: 'distance',
+                          verified: false,
+                          available: true
+                        })
+                        searchStaff(true)
+                      }}
+                      className="text-orange-600 hover:text-orange-700 text-sm font-medium mt-2"
+                    >
+                      Expand search criteria
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
 
-        <div className="mt-8 text-center">
-          <button
-            onClick={proceedToPayment}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors inline-flex items-center gap-2"
-          >
-            Continue to Payment
-            <ArrowRight className="w-4 h-4" />
-          </button>
+        {/* Bottom Actions */}
+        <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-left">
+              <div className="font-semibold text-gray-900">
+                {totalSelected} of {totalNeeded} staff selected
+              </div>
+              <div className="text-sm text-gray-600">
+                {totalSelected < totalNeeded && `Select ${totalNeeded - totalSelected} more to continue`}
+                {totalSelected === totalNeeded && 'Ready to proceed to payment'}
+                {totalSelected > totalNeeded && 'Too many staff selected'}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSelectedStaff([])}
+                disabled={selectedStaff.length === 0}
+                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Clear Selection
+              </button>
+              
+              <button
+                onClick={proceedToPayment}
+                disabled={totalSelected !== totalNeeded}
+                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors flex items-center gap-2"
+              >
+                Continue to Payment
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   const renderPaymentStep = () => {
-    const subtotal = bookingDetails.staffRequests.reduce((sum, req) => {
-      const staffType = staffTypes.find(t => t.id === req.type)
-      return sum + (staffType?.rate || 0) * req.quantity * hours
-    }, 0)
+    const subtotal = selectedStaff.reduce((sum, staff) => sum + staff.hourlyRate * hours, 0)
     const platformFee = subtotal * 0.15
     const total = subtotal + platformFee
 
@@ -608,17 +1053,26 @@ export default function ImprovedStaffHiring() {
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Staff Summary</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">Selected Staff</h3>
               <div className="space-y-3">
-                {bookingDetails.staffRequests.map((request) => {
-                  const staffType = staffTypes.find(t => t.id === request.type)
+                {selectedStaff.map((staff) => {
+                  const staffType = staffTypes.find(t => t.id === staff.staffType)
                   const Icon = staffType?.icon || Users
                   return (
-                    <div key={request.type} className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-orange-600" />
+                    <div key={staff.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-orange-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm">{staff.name}</div>
+                          <div className="text-gray-600 text-xs">{staffType?.name} • {staff.rating.toFixed(1)} ★</div>
+                        </div>
                       </div>
-                      <span className="text-gray-900">{request.quantity} {staffType?.name}(s)</span>
+                      <div className="text-right">
+                        <div className="font-medium text-gray-900 text-sm">${staff.hourlyRate}/hr</div>
+                        <div className="text-gray-600 text-xs">${(staff.hourlyRate * hours).toFixed(2)} total</div>
+                      </div>
                     </div>
                   )
                 })}
@@ -661,13 +1115,12 @@ export default function ImprovedStaffHiring() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Pricing Breakdown</h3>
               <div className="space-y-3 text-sm">
-                {bookingDetails.staffRequests.map((request) => {
-                  const staffType = staffTypes.find(t => t.id === request.type)
-                  const cost = (staffType?.rate || 0) * request.quantity * hours
+                {selectedStaff.map((staff) => {
+                  const cost = staff.hourlyRate * hours
                   return (
-                    <div key={request.type} className="flex justify-between">
+                    <div key={staff.id} className="flex justify-between">
                       <span className="text-gray-600">
-                        {request.quantity} {staffType?.name}(s) × {hours.toFixed(1)}h
+                        {staff.name} × {hours.toFixed(1)}h
                       </span>
                       <span className="font-medium text-gray-900">${cost.toFixed(2)}</span>
                     </div>
@@ -738,7 +1191,7 @@ export default function ImprovedStaffHiring() {
       
       <h1 className="text-2xl font-bold text-gray-900 mb-3">Payment Successful!</h1>
       <p className="text-gray-600 mb-8">
-        Your booking has been confirmed and staff have been notified.
+        Your booking has been confirmed and selected staff have been notified.
       </p>
       
       {bookingId && (
@@ -757,7 +1210,7 @@ export default function ImprovedStaffHiring() {
             <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
               <CheckCircle className="w-3 h-3 text-green-600" />
             </div>
-            <span className="text-gray-700 text-sm">Staff members will confirm within 2 hours</span>
+            <span className="text-gray-700 text-sm">Selected staff will confirm within 2 hours</span>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -776,7 +1229,7 @@ export default function ImprovedStaffHiring() {
 
       <div className="space-y-3">
         <button
-          onClick={() => window.location.href = '/booking'}
+          onClick={() => window.location.href = '/bookings'}
           className="w-full bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
         >
           View My Bookings
@@ -786,6 +1239,7 @@ export default function ImprovedStaffHiring() {
             setStep(1)
             setBookingId(null)
             setAvailableStaff([])
+            setSelectedStaff([])
             setBookingDetails({
               jobTitle: '',
               jobType: 'event',
@@ -844,7 +1298,7 @@ export default function ImprovedStaffHiring() {
       {/* Main Content */}
       <div className="py-6 px-4 sm:px-6">
         {step === 1 && renderRequestStep()}
-        {step === 2 && renderMatchStep()}
+        {step === 2 && renderStaffSelectionStep()}
         {step === 3 && renderPaymentStep()}
         {step === 4 && renderSuccessStep()}
       </div>

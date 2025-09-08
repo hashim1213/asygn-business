@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils"
 
 const staffSidebarItems = [
   { id: "dashboard", label: "Dashboard", icon: Home, href: "/staff/dashboard" },
-  { id: "jobs", label: "Available Jobs", icon: Briefcase, href: "/staff/jobs" },
+  
   { id: "schedule", label: "My Schedule", icon: Calendar, href: "/staff/schedule" },
   { id: "availability", label: "Availability", icon: Clock, href: "/staff/availability" },
   { id: "messages", label: "Messages", icon: MessageCircle, href: "/staff/messages" },
   { id: "earnings", label: "Earnings", icon: Wallet, href: "/staff/earnings" },
-  { id: "profile", label: "Profile", icon: User, href: "/staff/profile" },
-  { id: "settings", label: "Settings", icon: Settings, href: "/staff/settings" },
+ 
+  
 ]
 
 interface StaffSidebarProps {
@@ -82,14 +82,10 @@ export function StaffSidebar({
             <div className="flex items-center min-w-0">
               {(!isCollapsed || isMobile) && (
                 <div className="flex items-center space-x-3">
-                  <img 
-                    src="/asygn.png" 
-                    alt="Asygn Staff" 
-                    className="h-6 w-auto flex-shrink-0"
-                  />
+                  
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-gray-900">Staff Portal</div>
-                    <div className="text-xs text-gray-500">Professional Dashboard</div>
+                   
                   </div>
                 </div>
               )}
@@ -196,42 +192,6 @@ export function StaffSidebar({
           </ul>
         </nav>
 
-        {/* Quick Stats */}
-        <div className="p-3 border-t border-gray-100 bg-gray-50/50">
-          {!isCollapsed || isMobile ? (
-            <div className="space-y-3">
-              <div className="bg-white rounded-md p-3 border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-700">This Week</span>
-                  <Star className="h-3 w-3 text-yellow-500" />
-                </div>
-                <div className="text-lg font-semibold text-gray-900">${staffStats.weeklyEarnings}</div>
-                <div className="text-xs text-gray-500">Earnings</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white rounded-md p-2 border border-gray-200 text-center">
-                  <div className="text-sm font-semibold text-gray-900">{staffStats.upcomingShifts}</div>
-                  <div className="text-xs text-gray-500">Upcoming</div>
-                </div>
-                <div className="bg-white rounded-md p-2 border border-gray-200 text-center">
-                  <div className="text-sm font-semibold text-gray-900">4.8</div>
-                  <div className="text-xs text-gray-500">Rating</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center space-y-3">
-              <div className="text-center">
-                <div className="text-sm font-semibold text-gray-900">${(staffStats.weeklyEarnings / 1000).toFixed(1)}k</div>
-                <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mt-1"></div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-semibold text-gray-900">4.8</div>
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mx-auto mt-1"></div>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </>
   )

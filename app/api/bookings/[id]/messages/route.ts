@@ -1,14 +1,34 @@
 // app/api/bookings/[id]/messages/route.ts
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const prisma = new PrismaClient()
 
-export async function POST(
+export async function POST_MESSAGES(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session || !session.user || !session.user.email) {
+      return NextResponse.json({ 
+        error: 'Unauthorized - Please sign in to send messages' 
+      }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'User not found in database' 
+      }, { status: 404 })
+    }
+
     const bookingId = params.id
     const { staffId, message } = await request.json()
 
@@ -18,20 +38,11 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Get the current client (in production, get from auth session)
-    const client = await prisma.user.findFirst({
-      where: { role: 'CLIENT' }
-    })
-
-    if (!client) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
-    }
-
-    // Verify the booking belongs to this client
+    // Verify the booking belongs to this user
     const booking = await prisma.booking.findFirst({
       where: {
         id: bookingId,
-        clientId: client.id
+        clientId: user.id
       }
     })
 
@@ -53,36 +64,21 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Create the message record (you'll need to create a Message model)
-    // For now, we'll simulate this and just return success
-    const messageRecord = {
-      id: `msg_${Date.now()}`,
-      bookingId: bookingId,
-      senderId: client.id,
-      receiverId: staff.userId,
-      content: message,
-      createdAt: new Date(),
-      read: false
-    }
-
-    // TODO: Create actual message in database when Message model is added
-    // const newMessage = await prisma.message.create({
-    //   data: {
-    //     bookingId: bookingId,
-    //     senderId: client.id,
-    //     receiverId: staff.userId,
-    //     content: message,
-    //     messageType: 'TEXT'
-    //   }
-    // })
-
-    // TODO: Send real-time notification to staff member
-    // This could be done via WebSocket, push notification, or email
+    // Create the message record
+    const newMessage = await prisma.message.create({
+      data: {
+        bookingId: bookingId,
+        senderId: user.id,
+        receiverId: staff.userId,
+        content: message,
+        messageType: 'TEXT'
+      }
+    })
 
     return NextResponse.json({
       message: 'Message sent successfully',
-      messageId: messageRecord.id,
-      timestamp: messageRecord.createdAt
+      messageId: newMessage.id,
+      timestamp: newMessage.createdAt
     })
   } catch (error) {
     console.error('Error sending message:', error)
@@ -93,29 +89,38 @@ export async function POST(
   }
 }
 
-export async function GET(
+export async function GET_MESSAGES(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session || !session.user || !session.user.email) {
+      return NextResponse.json({ 
+        error: 'Unauthorized - Please sign in to view messages' 
+      }, { status: 401 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'User not found in database' 
+      }, { status: 404 })
+    }
+
     const bookingId = params.id
     const url = new URL(request.url)
     const staffId = url.searchParams.get('staffId')
-
-    // Get the current client
-    const client = await prisma.user.findFirst({
-      where: { role: 'CLIENT' }
-    })
-
-    if (!client) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
-    }
 
     // Verify booking access
     const booking = await prisma.booking.findFirst({
       where: {
         id: bookingId,
-        clientId: client.id
+        clientId: user.id
       }
     })
 
@@ -125,35 +130,23 @@ export async function GET(
       }, { status: 404 })
     }
 
-    // TODO: Fetch actual messages when Message model is implemented
-    // const messages = await prisma.message.findMany({
-    //   where: {
-    //     bookingId: bookingId,
-    //     ...(staffId && {
-    //       OR: [
-    //         { senderId: staffId },
-    //         { receiverId: staffId }
-    //       ]
-    //     })
-    //   },
-    //   orderBy: { createdAt: 'asc' },
-    //   include: {
-    //     sender: { select: { name: true, role: true } },
-    //     receiver: { select: { name: true, role: true } }
-    //   }
-    // })
-
-    // Mock messages for now
-    const messages = [
-      {
-        id: 'msg_1',
-        content: "I'll arrive 30 minutes early to set up.",
-        senderId: staffId || 'staff_1',
-        senderName: 'Alex Johnson',
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        read: true
+    // Fetch actual messages
+    const messages = await prisma.message.findMany({
+      where: {
+        bookingId: bookingId,
+        ...(staffId && {
+          OR: [
+            { senderId: staffId },
+            { receiverId: staffId }
+          ]
+        })
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        sender: { select: { name: true, role: true } },
+        receiver: { select: { name: true, role: true } }
       }
-    ]
+    })
 
     return NextResponse.json({
       messages: messages
