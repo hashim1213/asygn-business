@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/layout/main-layout"
-import BookingManagement from "@/components/pages/booking-content"
+import MessagesPage from "@/components/pages/messages-content"
 
 export default function EventsPage() {
   return (
@@ -7,7 +7,7 @@ export default function EventsPage() {
      
       showCreateShift={false}
     >
-      <BookingManagement />
+      <MessagesPage/>
     </MainLayout>
   ) 
 }

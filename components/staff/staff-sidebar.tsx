@@ -2,21 +2,23 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Home, Calendar, Activity, Users, Settings, Zap, X, ChevronLeft, MessageCircle, Plus } from "lucide-react"
+import { Home, Calendar, User, Wallet, MessageCircle, Settings, Clock, X, ChevronLeft, Briefcase, Star } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useAppContext } from "@/lib/context/app-context"
 import { cn } from "@/lib/utils"
 
-const sidebarItems = [
-  { id: "workers", label: "Create a Post", icon: Plus, href: "/workers" },
-  { id: "booking", label: "Bookings", icon: Users, href: "/booking" },
-  { id: "messages", label: "Messages", icon: MessageCircle, href: "/messages" },
-  { id: "staff", label: "Live Staff", icon: Activity, href: "/staff" },
+const staffSidebarItems = [
+  { id: "dashboard", label: "Dashboard", icon: Home, href: "/staff/dashboard" },
+  
+  { id: "schedule", label: "My Schedule", icon: Calendar, href: "/staff/schedule" },
+  { id: "availability", label: "Availability", icon: Clock, href: "/staff/availability" },
+  { id: "messages", label: "Messages", icon: MessageCircle, href: "/staff/messages" },
+  { id: "earnings", label: "Earnings", icon: Wallet, href: "/staff/earnings" },
+ 
+  
 ]
 
-interface AppSidebarProps {
-  onQuickFill: () => void
+interface StaffSidebarProps {
   isOpen?: boolean
   onClose?: () => void
   isMobile?: boolean
@@ -24,26 +26,31 @@ interface AppSidebarProps {
   onToggleCollapse?: () => void
 }
 
-export function AppSidebar({ 
-  onQuickFill, 
+export function StaffSidebar({ 
   isOpen = true, 
   onClose, 
   isMobile = false,
   isCollapsed = false,
   onToggleCollapse
-}: AppSidebarProps) {
+}: StaffSidebarProps) {
   const pathname = usePathname()
-  const { state } = useAppContext()
+
+  // Mock data - replace with actual context/state
+  const staffStats = {
+    pendingJobs: 3,
+    unreadMessages: 2,
+    upcomingShifts: 1,
+    weeklyEarnings: 1250
+  }
 
   const getItemBadge = (itemId: string) => {
     switch (itemId) {
-      case "shifts":
-        return state.shifts?.filter((s) => s.status === "published").length || 0
-      case "staff":
-        return state.staff?.filter((s) => s.status === "active").length || 0
+      case "jobs":
+        return staffStats.pendingJobs || 0
       case "messages":
-        // Show unread messages count
-        return state.messages?.filter((m) => !m.isRead).length || 0
+        return staffStats.unreadMessages || 0
+      case "schedule":
+        return staffStats.upcomingShifts || 0
       default:
         return 0
     }
@@ -73,17 +80,20 @@ export function AppSidebar({
         <div className={cn("p-4 border-b border-gray-100", isCollapsed && !isMobile && "px-2")}>
           <div className="flex items-center justify-between">
             <div className="flex items-center min-w-0">
-              
+              {(!isCollapsed || isMobile) && (
                 <div className="flex items-center space-x-3">
-               { /* Logo */}
-               
                   
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900">Business Portal</div>
+                    <div className="text-sm font-semibold text-gray-900">Staff Portal</div>
+                   
                   </div>
-               
                 </div>
-              
+              )}
+              {isCollapsed && !isMobile && (
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-4 h-4 text-white" />
+                </div>
+              )}
             </div>
             
             {/* Mobile Close Button */}
@@ -115,7 +125,7 @@ export function AppSidebar({
         {/* Navigation */}
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
-            {sidebarItems.map((item) => {
+            {staffSidebarItems.map((item) => {
               const isActive = pathname === item.href
               const badgeCount = getItemBadge(item.id)
 
@@ -149,7 +159,9 @@ export function AppSidebar({
                                 ? "bg-orange-100 text-orange-700 border-orange-200"
                                 : item.id === "messages"
                                   ? "bg-blue-100 text-blue-700 border-blue-200"
-                                  : "bg-gray-100 text-gray-600 border-gray-200"
+                                  : item.id === "jobs"
+                                    ? "bg-green-100 text-green-700 border-green-200"
+                                    : "bg-gray-100 text-gray-600 border-gray-200"
                             )}
                           >
                             {badgeCount}
@@ -165,7 +177,8 @@ export function AppSidebar({
                         {badgeCount > 0 && (
                           <span className={cn(
                             "ml-2 px-1.5 py-0.5 rounded text-xs",
-                            item.id === "messages" ? "bg-blue-600" : "bg-gray-700"
+                            item.id === "messages" ? "bg-blue-600" : 
+                            item.id === "jobs" ? "bg-green-600" : "bg-gray-700"
                           )}>
                             {badgeCount}
                           </span>
@@ -179,9 +192,6 @@ export function AppSidebar({
           </ul>
         </nav>
 
-     
-
-      
       </div>
     </>
   )

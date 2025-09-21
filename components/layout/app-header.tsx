@@ -46,8 +46,6 @@ const mockContext = {
 }
 
 interface AppHeaderProps {
-  title: string
-  subtitle: string
   onCreateShift?: () => void
   onMenuClick?: () => void
   showMenuButton?: boolean
@@ -56,8 +54,6 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({
-  title,
-  subtitle,
   onCreateShift,
   onMenuClick,
   showMenuButton = false,
@@ -87,26 +83,15 @@ export function AppHeader({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="text-xl lg:text-2xl font-semibold text-gray-900 truncate">
-                  {title}
-                </h1>
+                 <img 
+                    src="/asygn.png" 
+                    alt="Asygn" 
+                    className="h-6 w-auto flex-shrink-0"
+                  />
                 <div className="flex items-center gap-4 mt-0.5">
-                  <p className="text-gray-600 text-sm truncate">{subtitle}</p>
-                  {/* Human-friendly quick context */}
-                  <div className="hidden md:flex items-center gap-3 text-xs text-gray-500">
-                    {state.quickStats.todayEvents > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{state.quickStats.todayEvents} events today</span>
-                      </div>
-                    )}
-                    {state.quickStats.nextEventTime && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>Next at {state.quickStats.nextEventTime}</span>
-                      </div>
-                    )}
-                  </div>
+                  
+                 
+                  
                 </div>
               </div>
             </div>
@@ -140,15 +125,7 @@ export function AppHeader({
           {/* Quick Actions Dropdown - Mobile */}
           <div className="sm:hidden">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="p-2"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
+            
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={onCreateShift}>
                   <Calendar className="mr-2 h-4 w-4" />
@@ -197,16 +174,7 @@ export function AppHeader({
                     <p className="text-xs leading-none text-muted-foreground mt-1">{state.user.businessName}</p>
                     <p className="text-xs leading-none text-muted-foreground">{state.user.email}</p>
                   </div>
-                  <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-gray-900">{state.stats.activeShifts}</p>
-                      <p className="text-xs text-gray-500">Active Events</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-gray-900">{state.stats.totalStaff}</p>
-                      <p className="text-xs text-gray-500">Staff Working</p>
-                    </div>
-                  </div>
+                  
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -244,24 +212,7 @@ export function AppHeader({
         </div>
       </div>
       
-      {/* Enhanced Mobile Quick Stats */}
-      <div className="sm:hidden mt-3 p-3 bg-gradient-to-r from-gray-50 to-orange-50 rounded-lg border border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="font-medium text-gray-700">{state.stats.activeShifts} events live</span>
-            </div>
-            <span className="text-gray-500">•</span>
-            <span className="text-gray-600">{state.stats.totalStaff} staff working</span>
-          </div>
-          {state.quickStats.nextEventTime && (
-            <div className="text-xs text-orange-600 font-medium">
-              Next: {state.quickStats.nextEventTime}
-            </div>
-          )}
-        </div>
-      </div>
+     
     </header>
   )
 }
