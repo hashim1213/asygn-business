@@ -80,7 +80,6 @@ export function AppSidebar({
                   
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-gray-900">Business Portal</div>
-                   
                   </div>
                
                 </div>

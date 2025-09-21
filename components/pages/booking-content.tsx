@@ -841,7 +841,7 @@ export default function BookingManagement() {
             </p>
             {!searchTerm && filterStatus === 'all' && (
               <Button 
-                onClick={() => window.location.href = '/book-staff'}
+                onClick={() => window.location.href = '/workers'}
                 className="bg-orange-500 hover:bg-orange-600 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />

@@ -95,10 +95,10 @@ interface SearchFilters {
 }
 
 const staffTypes: StaffType[] = [
-  { id: 'BARTENDER', name: 'Bartender', icon: Coffee, rate: 35 },
-  { id: 'SERVER', name: 'Server', icon: Utensils, rate: 25 },
-  { id: 'BARBACK', name: 'Barback', icon: Package, rate: 20 },
-  { id: 'EVENT_CREW', name: 'Event Crew', icon: Headphones, rate: 22 }
+  { id: 'BARTENDER', name: 'Bartender', icon: Coffee, rate: 18},
+  { id: 'SERVER', name: 'Server', icon: Utensils, rate: 18 },
+  { id: 'BARBACK', name: 'Barback', icon: Package, rate: 18 },
+  { id: 'EVENT_CREW', name: 'Event Crew', icon: Headphones, rate: 20 }
 ]
 
 const jobTypes = [
